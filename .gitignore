@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.DS_Store
+
+models/roberta_clause_classifier/*
+data/cuad/
+data/processed/
+data/vector_index/
