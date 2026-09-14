@@ -7,3 +7,5 @@ models/roberta_clause_classifier/*
 data/cuad/
 data/processed/
 data/vector_index/
+
+data/sample_contracts/*.pdf
