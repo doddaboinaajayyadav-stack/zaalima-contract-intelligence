@@ -1,16 +1,33 @@
-"""Create a contract-level train/validation split for the five target categories."""
+﻿"""Create a contract-level train/validation split for the five target categories."""
 import json
 from pathlib import Path
 import random
 
-from .config import CLAUSE_CATEGORIES
 
+def prepare(
+    input_path="data/processed/cuad_flat.jsonl",
+    output_dir="data/processed",
+    seed=42,
+):
+    input_path = Path(input_path)
+    rows = []
 
-def prepare(input_path="data/processed/cuad_flat.jsonl", output_dir="data/processed", seed=42):
-    rows = [json.loads(x) for x in Path(input_path).read_text(encoding="utf-8").splitlines() if x.strip()]
-    # CUAD questions are category labels in natural-language question form.
+    with input_path.open("r", encoding="utf-8") as f:
+        for line_number, line in enumerate(f, 1):
+            line = line.strip()
+            if not line:
+                continue
+
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"Invalid JSON on line {line_number}: {exc}"
+                ) from exc
+
     def category(question: str):
         q = question.lower()
+
         mapping = {
             "termination for convenience": "Termination For Convenience",
             "anti-assignment": "Anti-Assignment",
@@ -18,32 +35,63 @@ def prepare(input_path="data/processed/cuad_flat.jsonl", output_dir="data/proces
             "cap on liability": "Cap On Liability",
             "non-compete": "Non-Compete",
         }
+
         for needle, label in mapping.items():
             if needle in q:
                 return label
+
         return None
 
     selected = []
-    for r in rows:
-        label = category(r.get("question", ""))
-        if label:
-            selected.append({**r, "category": label, "target": int(bool(r.get("answer_text", "").strip()))})
 
-    contracts = sorted({r["contract_id"] for r in selected})
+    for row in rows:
+        label = category(row.get("question", ""))
+
+        if label:
+            selected.append({
+                **row,
+                "category": label,
+                "target": int(bool(row.get("answer_text", "").strip())),
+            })
+
+    contracts = sorted({row["contract_id"] for row in selected})
+
     rng = random.Random(seed)
     rng.shuffle(contracts)
-    split = int(len(contracts) * 0.8)
-    train_contracts = set(contracts[:split])
-    train = [r for r in selected if r["contract_id"] in train_contracts]
-    val = [r for r in selected if r["contract_id"] not in train_contracts]
 
-    out = Path(output_dir)
-    out.mkdir(parents=True, exist_ok=True)
-    for name, data in [("train.jsonl", train), ("val.jsonl", val)]:
-        with (out / name).open("w", encoding="utf-8") as f:
+    split = int(len(contracts) * 0.8)
+
+    train_contracts = set(contracts[:split])
+
+    train = [
+        row for row in selected
+        if row["contract_id"] in train_contracts
+    ]
+
+    val = [
+        row for row in selected
+        if row["contract_id"] not in train_contracts
+    ]
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for name, data in [
+        ("train.jsonl", train),
+        ("val.jsonl", val),
+    ]:
+        output_path = output_dir / name
+
+        with output_path.open("w", encoding="utf-8") as f:
             for row in data:
                 f.write(json.dumps(row, ensure_ascii=False) + "\n")
-    print(f"train={len(train):,}, val={len(val):,}, contracts={len(contracts)}")
+
+    print(
+        f"train={len(train):,}, "
+        f"val={len(val):,}, "
+        f"contracts={len(contracts)}"
+    )
+
     return train, val
 
 
