@@ -352,3 +352,49 @@ The current implementation provides an end-to-end contract intelligence pipeline
 - Automated testing
 
 Further improvements can include training and integrating production-grade classification models, improving entity extraction accuracy, expanding clause categories, and adding more comprehensive test coverage.
+
+
+## 🧠 ML Training Pipeline
+
+The project includes a complete data preparation pipeline for training a
+multi-label RoBERTa-based clause classifier.
+
+### Dataset
+
+The system uses the CUAD (Contract Understanding Atticus Dataset) for
+contract clause classification.
+
+Current dataset preparation:
+
+- 510 contracts
+- 20,910 flattened contract/question records
+- 2,448 training records
+- 612 validation records
+- 80/20 contract-level train/validation split
+- Five target clause categories:
+  - Termination For Convenience
+  - Anti-Assignment
+  - Governing Law
+  - Cap On Liability
+  - Non-Compete
+
+### Training Workflow
+
+```text
+CUAD Dataset
+     ↓
+CUADv1.json
+     ↓
+load_data.py
+     ↓
+cuad_flat.jsonl
+     ↓
+prepare_training_data.py
+     ↓
+train.jsonl + val.jsonl
+     ↓
+train_transformer.py
+     ↓
+RoBERTa Clause Classifier
+     ↓
+models/roberta_clause_classifier/
